@@ -2,9 +2,9 @@
 #define PIECE_H
 
 #include <string>
-#include <iostream>
+#include <vector>
+#include <utility> // For std::pair
 
-// The Piece class
 class Piece {
 protected:
     int row, col;         // Position on the board
@@ -12,11 +12,9 @@ protected:
     std::string symbol;   // Visual representation of the piece
 
 public:
-    // Constructor
     Piece(int r, int c, int w, const std::string& sym)
         : row(r), col(c), weight(w), symbol(sym) {}
 
-    // Virtual destructor
     virtual ~Piece() = default;
 
     // Getters
@@ -33,41 +31,55 @@ public:
 
     // Pure virtual function to check if a move is legal for the piece
     virtual bool isLegalMove(int targetRow, int targetCol) const = 0;
+
+    // New: Get all legal moves for this piece
+    virtual std::vector<std::pair<int, int>> getLegalMoves(int boardSize) const = 0;
 };
 
-// Example derived class (e.g., King)
+// Example derived class: King
 class King : public Piece {
 public:
     King(int r, int c) : Piece(r, c, 10, "K") {}
 
-    // Check if a move is legal
     bool isLegalMove(int targetRow, int targetCol) const override {
         return abs(targetRow - row) <= 1 && abs(targetCol - col) <= 1;
     }
-};
 
-class EnemyKing : public Piece {
-public:
-    EnemyKing(int r, int c) : Piece(r, c, 10, "E") {}
-
-    // Check if a move is legal
-    bool isLegalMove(int targetRow, int targetCol) const override {
-        return abs(targetRow - row) <= 1 && abs(targetCol - col) <= 1;
+    std::vector<std::pair<int, int>> getLegalMoves(int boardSize) const override {
+        std::vector<std::pair<int, int>> moves;
+        for (int dRow = -1; dRow <= 1; ++dRow) {
+            for (int dCol = -1; dCol <= 1; ++dCol) {
+                int newRow = row + dRow;
+                int newCol = col + dCol;
+                if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
+                    moves.emplace_back(newRow, newCol);
+                }
+            }
+        }
+        return moves;
     }
 };
 
-// The Piece class and other derived classes ...
-
+// Example derived class: Bishop
 class Bishop : public Piece {
 public:
     Bishop(int r, int c) : Piece(r, c, 5, "B") {}
 
-    // Check if a move is legal (diagonal moves)
     bool isLegalMove(int targetRow, int targetCol) const override {
         return abs(targetRow - row) == abs(targetCol - col);
     }
+
+    std::vector<std::pair<int, int>> getLegalMoves(int boardSize) const override {
+        std::vector<std::pair<int, int>> moves;
+        for (int dRow = -boardSize; dRow <= boardSize; ++dRow) {
+            int newRow = row + dRow;
+            int newCol = col + dRow;
+            if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
+                moves.emplace_back(newRow, newCol);
+            }
+        }
+        return moves;
+    }
 };
-
-
 
 #endif // PIECE_H

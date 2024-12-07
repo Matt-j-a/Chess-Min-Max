@@ -12,13 +12,19 @@ class ChessBoard {
 private:
     static const int BOARD_SIZE = 8; // Define an 8x8 board
     std::vector<std::vector<std::shared_ptr<Piece>>> board; // 2D vector to represent the board
-
+    int moveAttempts = 0;
     // Store move history for undo functionality
     struct Move {
         int oldRow, oldCol, newRow, newCol;
         std::shared_ptr<Piece> capturedPiece;
     };
     std::vector<Move> moveHistory;
+public:
+    struct Cell {
+        int row;
+        char col; // Column as a letter (e.g., A-H)
+        std::shared_ptr<Piece> piece;
+    };
 
 public:
     ChessBoard() : board(BOARD_SIZE, std::vector<std::shared_ptr<Piece>>(BOARD_SIZE, nullptr)) {}
@@ -91,25 +97,26 @@ public:
         }
     }
 
+    Cell getCellObject(int row, int col) const {
+        if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
+            char columnLetter = 'A' + col;
+            return {row + 1, columnLetter, board[row][col]};
+        } else {
+            return {row + 1, 'X', nullptr}; // Invalid column marked as 'X'
+        }
+    }
+
     /// Get all legal moves for a player
-std::vector<std::pair<int, int>> getLegalMoves(bool isMaximizing) const {
+   std::vector<std::pair<int, int>> getLegalMovesForPlayer(bool isMaximizing) const {
     std::vector<std::pair<int, int>> moves;
     std::string playerSymbol = isMaximizing ? "K" : "E";
 
     for (int row = 0; row < BOARD_SIZE; ++row) {
         for (int col = 0; col < BOARD_SIZE; ++col) {
-            if (board[row][col] && board[row][col]->getSymbol() == playerSymbol) {
-                for (int dRow = -BOARD_SIZE; dRow <= BOARD_SIZE; ++dRow) {
-                    for (int dCol = -BOARD_SIZE; dCol <= BOARD_SIZE; ++dCol) {
-                        int newRow = row + dRow;
-                        int newCol = col + dCol;
-                        if (newRow >= 0 && newRow < BOARD_SIZE && newCol >= 0 && newCol < BOARD_SIZE &&
-                            board[row][col]->isLegalMove(newRow, newCol) &&
-                            (!board[newRow][newCol] || board[newRow][newCol]->getSymbol() != playerSymbol)) {
-                            moves.emplace_back(newRow, newCol);
-                        }
-                    }
-                }
+            auto piece = board[row][col];
+            if (piece && piece->getSymbol() == playerSymbol) {
+                auto pieceMoves = piece->getLegalMoves(BOARD_SIZE);
+                moves.insert(moves.end(), pieceMoves.begin(), pieceMoves.end());
             }
         }
     }
@@ -119,6 +126,7 @@ std::vector<std::pair<int, int>> getLegalMoves(bool isMaximizing) const {
 
 
     void applyMove(int oldRow, int oldCol, int newRow, int newCol) {
+        ++moveAttempts; // Increment the move attempt counter
         auto piece = board[oldRow][oldCol];
         if (piece && piece->isLegalMove(newRow, newCol)) {
             std::shared_ptr<Piece> capturedPiece = board[newRow][newCol];
@@ -126,9 +134,7 @@ std::vector<std::pair<int, int>> getLegalMoves(bool isMaximizing) const {
             board[newRow][newCol] = piece;
             board[oldRow][oldCol] = nullptr;
             piece->setPosition(newRow, newCol);
-        } else {
-            std::cerr << "Illegal move!" << std::endl;
-        }
+        } 
     }
 
     void undoMove() {
@@ -139,25 +145,32 @@ std::vector<std::pair<int, int>> getLegalMoves(bool isMaximizing) const {
             board[lastMove.oldRow][lastMove.oldCol] = piece;
             board[lastMove.newRow][lastMove.newCol] = lastMove.capturedPiece;
             piece->setPosition(lastMove.oldRow, lastMove.oldCol);
-        } else {
-            std::cerr << "No move to undo!" << std::endl;
-        }
+        } 
     }
 
     int evaluateBoard(const ChessBoard& board) {
-    int score = 0;
-    for (int row = 0; row < 8; ++row) {
-        for (int col = 0; col < 8; ++col) {
-            auto piece = board.getCell(row, col);
-            if (piece) {
-                score += (piece->getSymbol() == "K" ? piece->getWeight() : -piece->getWeight());
+        int score = 0;
+        for (int row = 0; row < 8; ++row) {
+            for (int col = 0; col < 8; ++col) {
+                auto piece = board.getCell(row, col);
+                if (piece) {
+                    score += (piece->getSymbol() == "K" ? piece->getWeight() : -piece->getWeight());
+                }
             }
         }
+        return score;
     }
-    return score;
-}
 
+    void resetMoveAttempts() {
+        moveAttempts = 0;
+    }
 
+    int getMoveAttempts() const {
+        return moveAttempts;
+    }
+
+    
+    
 };
 
 #endif // CHESSBOARD_H
