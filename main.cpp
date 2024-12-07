@@ -1,43 +1,65 @@
 #include "ChessBoard.cpp"
-#include "Piece.cpp"
 #include <iostream>
+#include <limits>
 
-int main() {
-    // Create a chessboard
-    ChessBoard board;
-    //Minmax minmaxm
-    // Place pieces on the board
-    std::cout << "Placing pieces on the board...\n";
-    board.placePiece(0, 0, "K"); // Player's King
-    board.placePiece(4, 4, "E"); // Enemy's King
-
-    // Display the initial board
-    std::cout << "Initial Board:\n";
-    board.displayBoard();
-
-    // Test getLegalMoves
-    std::cout << "\nLegal moves for Player's King (K):\n";
-    auto legalMoves = board.getLegalMoves(true);
-    for (const auto& move : legalMoves) {
-        std::cout << "(" << move.first + 1 << ", " << static_cast<char>(move.second + 'A') << ")\n";
+// Evaluation function
+int evaluateBoard(const ChessBoard& board) {
+    int score = 0;
+    for (int row = 0; row < 8; ++row) {
+        for (int col = 0; col < 8; ++col) {
+            auto piece = board.getCell(row, col);
+            if (piece) {
+                score += (piece->getSymbol() == "K" ? piece->getWeight() : -piece->getWeight());
+            }
+        }
     }
-
-    // Test applyMove
-   // Assuming you already have the logic for getLegalMoves...
-if (!legalMoves.empty()) {
-    std::cout << "\nApplying move for Player's King to first legal position...\n";
-    int oldRow = 0, oldCol = 0; // Initial position of Player's King
-    int newRow = legalMoves[0].first, newCol = legalMoves[0].second;
-
-    // Apply the move
-    board.applyMove(oldRow, oldCol, newRow, newCol, "K");  // Make sure to pass the symbol for the piece
-    board.displayBoard();
+    return score;
 }
 
-// Test undo
-std::cout << "\nUndoing the last move...\n";
-board.undoMove();  // Simply call undoMove without parameters
-board.displayBoard();
+// Minimax function
+int minimax(ChessBoard& board, int depth, bool isMaximizing) {
+    if (depth == 0) {
+        return evaluateBoard(board);
+    }
+
+    auto moves = board.getLegalMoves(isMaximizing);
+    int bestScore = isMaximizing ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+
+    for (const auto& move : moves) {
+        board.applyMove(move.first, move.second, move.first, move.second);
+        int score = minimax(board, depth - 1, !isMaximizing);
+        board.undoMove();
+
+        if (isMaximizing) {
+            bestScore = std::max(bestScore, score);
+        } else {
+            bestScore = std::min(bestScore, score);
+        }
+    }
+
+    return bestScore;
+}
+
+int main() {
+    // Create a ChessBoard instance
+    ChessBoard board;
+
+    // Place some pieces on the board for testing
+    board.placePiece(0, 0, std::make_shared<King>(0, 0)); // King for maximizing player
+    board.placePiece(7, 7, std::make_shared<EnemyKing>(7, 7)); // Enemy King
+    board.placePiece(4, 4, std::make_shared<Bishop>(4, 4)); // Bishop for maximizing player
+
+    // Display the board
+    board.displayBoard();
+
+    // Evaluate the board
+    int score = evaluateBoard(board);
+    std::cout << "Board evaluation score: " << score << std::endl;
+
+    // Test the minimax algorithm
+    int minimaxScore = minimax(board, 3, true);
+    std::cout << "Minimax score: " << minimaxScore << std::endl;
 
     return 0;
 }
+

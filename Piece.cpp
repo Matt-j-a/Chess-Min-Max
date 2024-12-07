@@ -56,6 +56,18 @@ public:
     }
 };
 
+// The Piece class and other derived classes ...
+
+class Bishop : public Piece {
+public:
+    Bishop(int r, int c) : Piece(r, c, 5, "B") {}
+
+    // Check if a move is legal (diagonal moves)
+    bool isLegalMove(int targetRow, int targetCol) const override {
+        return abs(targetRow - row) == abs(targetCol - col);
+    }
+};
+
 
 
 #endif // PIECE_H
